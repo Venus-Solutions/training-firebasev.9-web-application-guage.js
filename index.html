@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RMUTL NAN Training</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Charmonman&family=Sarabun&display=swap"
+      rel="stylesheet"
+    />
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
+
+
+    <!-- ---------------------------------เพิ่ม Guage.js script--------------------------------- -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gauge.js/1.3.7/gauge.min.js"></script>
+    <!-- ---------------------------------เพิ่ม Guage.js script--------------------------------- -->
+
+
+
+    <link rel="manifest" href="/manifest.json" />
+
+    <style>
+      .container {
+        font-size: clamp(16px, 2.5vw, 25px);
+        margin-top: 20px;
+        text-align: center;
+        font-family: "Charmonman", cursive;
+        font-family: "Sarabun", sans-serif;
+      }
+
+      .temperature {
+        background-color: darkcyan;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 10px;
+      }
+
+      .humidity {
+        background-color: steelblue;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 10px;
+      }
+
+      button {
+        font-size: clamp(16px, 2.5vw, 25px);
+        padding: 10px 20px;
+        margin-bottom: 10px;
+        font-family: "Charmonman", cursive;
+        font-family: "Sarabun", sans-serif;
+        border-radius: 10px;
+      }
+
+      .onBtn {
+        background-color: green;
+        color: white;
+      }
+
+      .offBtn {
+        background-color: red;
+        color: white;
+      }
+
+      .onBtn:hover {
+        background-color: white;
+        color: green;
+        cursor: pointer;
+      }
+
+      .offBtn:hover {
+        background-color: white;
+        color: red;
+        cursor: pointer;
+      }
+
+      body {
+        background-color: rgb(95, 95, 95);
+      }
+
+      .chart-container {
+        height: 70vh;
+        width: 100vw;
+      }
+
+      .myChart {
+        margin: 20px 20px;
+      }
+
+
+
+      /* ************เพิ่ม CSS ตกแต่ง Tag <p>************** */
+      p{
+        color: white;
+        font-size: clamp(22px, 2.5vw, 28px);
+        font-family: "Charmonman", cursive;
+        font-family: "Sarabun", sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      /* ************เพิ่ม CSS ตกแต่ง Tag <p>************** */
+
+
+
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <label class="temperature"
+        >อุณหภูมิ = <span id="temperature"></span> องศาเซลเซียส</label
+      ><br /><br />
+      <label class="humidity">ความชื้น = <span id="humidity"></span> %</label
+      ><br /><br />
+
+
+
+      <!-- -------------เพิ่ม Tag <p> และ canvas สำหรับแสดง Guage------------- -->
+      <p><span id="temp-label"></span> °C</p>
+      <canvas id="temp-guage"></canvas>
+      <p><span id="humi-label"></span> %</p>
+      <canvas id="humi-guage"></canvas>
+      <!-- -------------เพิ่ม Tag <p> และ canvas สำหรับแสดง Guage------------- -->
+
+
+
+    </div>
+
+    <div class="container">
+      <button class="onBtn" id="onBtnR1">เปิด Relay #1</button>
+      <button class="offBtn" id="offBtnR1">ปิด Relay #1</button>
+      <button class="onBtn" id="onBtnR2">เปิด Relay #2</button>
+      <button class="offBtn" id="offBtnR2">ปิด Relay #2</button>
+    </div>
+    
+    <div class="chart-container">
+      <canvas id="myChart" class="myChart"></canvas>
+    </div>
+    
+    <script type="module">
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.18.0/firebase-app.js";
+      // TODO: Add SDKs for Firebase products that you want to use
+      // https://firebase.google.com/docs/web/setup#available-libraries
+
+
+
+      // -------------------เปลี่ยนเฉพาะส่วนนี้เป็นของแต่ละ User-------------------
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyB9L01Anbwh8AkBDJlhwX5-PSBuYZlghIw",
+        authDomain: "rmutl-nan.firebaseapp.com",
+        databaseURL: "https://rmutl-nan-default-rtdb.firebaseio.com",
+        projectId: "rmutl-nan",
+        storageBucket: "rmutl-nan.appspot.com",
+        messagingSenderId: "959036468076",
+        appId: "1:959036468076:web:7f5ec9d5810452fd886149",
+      };
+      // -------------------เปลี่ยนเฉพาะส่วนนี้เป็นของแต่ละ User-------------------
+
+
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+
+      let tempPoint, humiPoint;
+
+      import {
+        getDatabase,
+        ref,
+        onValue,
+        set,
+      } from "https://www.gstatic.com/firebasejs/9.18.0/firebase-database.js";
+
+      const db = getDatabase();
+
+      const firebaseTempRef = ref(db, "temp");
+      onValue(firebaseTempRef, (snapshot) => {
+        let temp = snapshot.val();
+        tempPoint = temp.toPrecision(4);
+        document.getElementById("temperature").innerHTML = tempPoint;
+        
+
+        
+        // -------------------เพิ่มการแสดงค่าอุณหภูมิที่ Label และ Guage-------------------
+        document.getElementById("temp-label").innerHTML= tempPoint;
+        tempGauge.set(tempPoint);        // Set ค่าอุณหภูมิไปที่ Guage
+        // -------------------เพิ่มการแสดงค่าอุณหภูมิที่ Label และ Guage-------------------
+
+
+
+      });
+
+      const firebaseHumiRef = ref(db, "humi");
+      onValue(firebaseHumiRef, (snapshot) => {
+        let humi = snapshot.val();
+        humiPoint = humi.toPrecision(4);
+        document.getElementById("humidity").innerHTML = humiPoint;
+
+
+
+        // -------------------เพิ่มการแสดงค่าความชื้นที่ Label และ Guage-------------------
+        document.getElementById("humi-label").innerHTML= humiPoint;
+        humiGauge.set(humiPoint);        // Set ค่าความชื้นไปที่ Guage
+        // -------------------เพิ่มการแสดงค่าความชื้นที่ Label และ Guage-------------------
+
+
+
+        updateChart();
+      });
+
+      const Relay1 = ref(db, "control/relay1");
+      const Relay2 = ref(db, "control/relay2");
+
+      let onBtnR1 = document.getElementById("onBtnR1");
+      let offBtnR1 = document.getElementById("offBtnR1");
+      let onBtnR2 = document.getElementById("onBtnR2");
+      let offBtnR2 = document.getElementById("offBtnR2");
+
+      onBtnR1.addEventListener("click", function onRelay1() {
+        set(Relay1, true);
+      });
+      offBtnR1.addEventListener("click", function offRelay1() {
+        set(Relay1, false);
+      });
+      onBtnR2.addEventListener("click", function onRelay2() {
+        set(Relay2, true);
+      });
+      offBtnR2.addEventListener("click", function offRelay2() {
+        set(Relay2, false);
+      });
+
+      let chartClick = document.getElementById("myChart");
+
+      function updateChart() {
+        myChart.data.labels.push("");
+        myChart.data.labels.shift();
+        myChart.data.datasets[0].data.push(tempPoint);
+        myChart.data.datasets[0].data.shift();
+        myChart.data.datasets[1].data.push(humiPoint);
+        myChart.data.datasets[1].data.shift();
+        myChart.update();
+      }
+
+      const temp = Array(20)
+        .fill()
+        .map(function rand() {
+          return Math.random() * 20 + 20;
+        });
+      const humi = Array(20)
+        .fill()
+        .map(function rand() {
+          return Math.random() * 30 + 50;
+        });
+
+      const ctx = document.getElementById("myChart").getContext("2d");
+      const myChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],
+          datasets: [
+            {
+              label: "อุณหภูมิ (C)",
+              data: temp,
+              backgroundColor: "rgba(54, 162, 235, 1)",
+              borderColor: "rgba(54, 162, 235, 1)",
+              borderWidth: 3,
+            },
+            {
+              label: "ความชื้น (%)",
+              data: humi,
+              backgroundColor: "rgba(255, 206, 86, 1)",
+              borderColor: "rgba(255, 206, 86, 1)",
+              borderWidth: 3,
+            },
+          ],
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: "rgba(255, 255, 255, 0.2)",
+              },
+              ticks: {
+                color: "white",
+              },
+            },
+            x: {
+              ticks: {
+                color: "white",
+              },
+            },
+          },
+          plugins: {
+            title: {
+              display: true,
+              text: "RMUTL NAN Training",
+              color: "white",
+            },
+            legend: {
+              labels: {
+                color: "white",
+              },
+            },
+          },
+          responsive: true,
+          maintainAspectRatio: false,
+        },
+      });
+
+
+
+      // --------------------Script ส่วนการแสดงผล Guage--------------------
+      // -----------------ปรับแต่งการแสดงผลของ Guage อุณหภูมิ-----------------
+      var optsTemp = {
+        angle: 0,                   // The span of the gauge arc
+        pointer: {
+          length: 0.63              // Relative to gauge radius
+        },
+        colorStop: "#DA1F1F"        // just experiment with them
+      };
+
+      // -----------------ปรับแต่งการแสดงผลของ Guage ความชื้น-----------------
+      var optsHumi = {
+        angle: 0,                   // The span of the gauge arc
+        pointer: {
+          length: 0.63              // Relative to gauge radius
+        },
+        colorStop: "#24AFCB"        // just experiment with them
+      };
+
+      // -----------------สร้างตัวแปร tempGuage และ humiGuage-----------------
+      var tempGauge = new Gauge(document.getElementById("temp-guage")).setOptions(optsTemp);
+      var humiGauge = new Gauge(document.getElementById("humi-guage")).setOptions(optsHumi);
+
+      // -----------------ปรับค่า Max, Min และ Animation Speed ของ tempGuage-----------------
+      tempGauge.maxValue = 40;            // set max gauge value
+      tempGauge.setMinValue(25);          // Prefer setter over gauge.minValue = 0
+      tempGauge.animationSpeed = 32       // set animation speed (32 is default value)
+
+      // -----------------ปรับค่า Max, Min และ Animation Speed ของ humiGuage-----------------
+      humiGauge.maxValue = 100;           // set max gauge value
+      humiGauge.setMinValue(50);          // Prefer setter over gauge.minValue = 0
+      humiGauge.animationSpeed = 32;      // set animation speed (32 is default value)
+
+    </script>
+  </body>
+</html>
